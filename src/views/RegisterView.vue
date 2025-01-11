@@ -4,41 +4,43 @@ import {useRouter} from 'vue-router'
 
 // 使用 ref 來管理表單數據
 const email = ref('')
+const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
+
 const router = useRouter()
 
-// 處理登入表單提交
+// 處理註冊表單提交
 const handleSubmit = async () => {
     try {
         // 基本的表單驗證
-        if (!email.value || !password.value) {
+        if (!email.value || !username.value || !password.value) {
             errorMessage.value = '請填寫所有欄位'
             return
         }
         
         // TODO: 這裡之後會加入實際的 API 呼叫
-        // 暫時模擬登入成功的情況
-        const mockToken = 'mock-jwt-token'
-        localStorage.setItem('token', mockToken)
+        // 先用簡單的模擬來測試路由功能
+        console.log('註冊資料：', {
+            email: email.value,
+            username: username.value,
+            password: password.value
+        })
         
-        // 清除錯誤訊息
-        errorMessage.value = ''
-        
-        // 登入成功後導向主頁面
-        await router.push('/home')
+        // 註冊成功後導向登入頁
+        await router.push('/login')
     } catch (error) {
-        errorMessage.value = '登入失敗，請確認帳號密碼是否正確'
-        console.error('登入錯誤：', error)
+        errorMessage.value = '註冊失敗，請稍後再試'
+        console.error('註冊錯誤：', error)
     }
 }
 </script>
 
 <template>
-    <div class="login-container">
+    <div class="register-container">
         <h1>VocabGenius</h1>
-        <div class="login-form">
-            <h2>登入</h2>
+        <div class="register-form">
+            <h2>註冊新帳號</h2>
             
             <form @submit.prevent="handleSubmit" class="form">
                 <div class="form-group">
@@ -48,6 +50,17 @@ const handleSubmit = async () => {
                         type="email"
                         v-model="email"
                         placeholder="請輸入電子郵件"
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">使用者名稱</label>
+                    <input
+                        id="username"
+                        type="text"
+                        v-model="username"
+                        placeholder="請輸入使用者名稱"
                         required
                     >
                 </div>
@@ -67,20 +80,19 @@ const handleSubmit = async () => {
                     {{ errorMessage }}
                 </div>
                 
-                <button type="submit" class="submit-btn">登入</button>
+                <button type="submit" class="submit-btn">註冊</button>
             </form>
             
-            <p class="register-link">
-                還沒有帳號？
-                <router-link to="/register">立即註冊</router-link>
+            <p class="login-link">
+                已經有帳號？
+                <router-link to="/login">返回登入</router-link>
             </p>
         </div>
     </div>
 </template>
 
 <style scoped>
-/* 我們可以重用大部分註冊頁面的樣式，只需要修改一些特定的類名 */
-.login-container {
+.register-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -90,7 +102,7 @@ const handleSubmit = async () => {
     background-color: #f5f5f5;
 }
 
-.login-form {
+.register-form {
     background-color: white;
     max-width: 400px;
     width: 100%;
@@ -132,7 +144,6 @@ input {
     border-radius: 4px;
     cursor: pointer;
     font-size: 1rem;
-    transition: background-color 0.3s ease;
 }
 
 .submit-btn:hover {
@@ -145,18 +156,18 @@ input {
     font-size: 0.9rem;
 }
 
-.register-link {
+.login-link {
     margin-top: 1rem;
     text-align: center;
     font-size: 0.9rem;
 }
 
-.register-link a {
+.login-link a {
     color: #4CAF50;
     text-decoration: none;
 }
 
-.register-link a:hover {
+.login-link a:hover {
     text-decoration: underline;
 }
 </style>
