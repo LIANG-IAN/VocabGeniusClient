@@ -8,14 +8,14 @@ export interface VocabCard {
     partOfSpeech: string
     exampleSentence: string
     sentenceTranslation: string
+    proficiency: number
     lastReviewedAt: string | null
     nextReviewAt: string | null
-    proficiency: number
     createdAt: string
 }
 
 // 分頁響應介面
-interface PaginatedResponse<T> {
+export interface PaginatedResponse<T> {
     totalItems: number
     totalPages: number
     currentPage: number
@@ -43,7 +43,7 @@ export interface StudyProgress {
 export const vocabService = {
     // 獲取單字卡列表
     async getVocabCards(params: VocabQueryParams = {}) {
-        const response = await api.get<PaginatedResponse<VocabCard>>('/vocab-cards/GetVocabCards', {
+        const response = await api.get<PaginatedResponse<VocabCard>>('/VocabCards/GetVocabCards', {
             params: {
                 pageNumber: params.pageNumber || 1,
                 pageSize: params.pageSize || 10,
@@ -57,7 +57,7 @@ export const vocabService = {
 
     // 添加新單字
     async createVocabCard(word: string) {
-        const response = await api.post<VocabCard>('/vocab-cards/CreateVocabCard', JSON.stringify(word), {
+        const response = await api.post<VocabCard>('/VocabCards/CreateVocabCard', JSON.stringify(word), {
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -67,12 +67,12 @@ export const vocabService = {
 
     // 刪除單字卡
     async deleteVocabCard(id: number) {
-        await api.delete(`/vocab-cards/${id}`)
+        await api.delete(`/VocabCards/${id}`)
     },
 
     // 獲取單字發音
     async getWordPronunciation(word: string) {
-        const response = await api.get(`/vocab-cards/pronunciation/${word}`, {
+        const response = await api.get(`/VocabCards/pronunciation/${word}`, {
             responseType: 'blob'
         })
         return response.data

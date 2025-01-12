@@ -26,6 +26,8 @@ const loadVocabCards = async (page = 1) => {
             pageSize: pageSize.value,
             search: searchQuery.value
         })
+        console.log(response[0])
+        console.log('Hi')
         
         vocabCards.value = response.items
         totalPages.value = response.totalPages
@@ -72,6 +74,24 @@ const handleAddWord = async () => {
     } catch (error: any) {
         console.error('新增單字失敗：', error)
         errorMessage.value = error.response?.data || '新增失敗，請重試'
+    } finally {
+        loading.value = false
+    }
+}
+
+// 處理刪除單字
+const handleDelete = async (id: number) => {
+    if (!confirm('確定要刪除這個單字卡嗎？')) {
+        return
+    }
+    
+    try {
+        loading.value = true
+        await vocabService.deleteVocabCard(id)
+        await loadVocabCards(currentPage.value)
+    } catch (error: any) {
+        console.error('刪除單字失敗：', error)
+        errorMessage.value = '刪除失敗，請重試'
     } finally {
         loading.value = false
     }

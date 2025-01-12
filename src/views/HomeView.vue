@@ -15,22 +15,35 @@ const loadData = async () => {
         isLoading.value = true
         errorMessage.value = ''
         
-        // 並行請求以提高載入速度
-        const [progress, stats] = await Promise.all([
-            studyService.getTodayProgress(),
-            studyService.getStudyStats()
-        ])
+        try {
+            studyProgress.value = await studyService.getTodayProgress()
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                studyProgress.value = {
+                    date: new Date().toISOString(),  // 確保日期為字串格式
+                    newWordsGoal: 5,
+                    newWordsCompleted: 0,
+                    reviewWordsGoal: 20,
+                    reviewWordsCompleted: 0,
+                    newWordsProgress: 0,
+                    reviewWordsProgress: 0
+                }
+            } else {
+                errorMessage.value = '載入進度資料失敗，請重新整理頁面'
+                return  // 遇到非 404 錯誤時提前返回，不繼續執行
+            }
+        }
         
-        studyProgress.value = progress
-        studyStats.value = stats
+        studyStats.value = await studyService.getStudyStats()
+        
     } catch (error: any) {
-        console.error('載入數據失敗：', error)
-        errorMessage.value = '載入數據失敗，請重新整理頁面'
+        console.error('載入統計資料失敗：', error)
         
-        // 如果是認證錯誤，重定向到登入頁面
         if (error.response?.status === 401) {
             localStorage.removeItem('token')
             await router.push('/login')
+        } else {
+            errorMessage.value = '載入資料失敗，請重新整理頁面'
         }
     } finally {
         isLoading.value = false

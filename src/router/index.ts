@@ -32,6 +32,16 @@ const routes: RouteRecordRaw[] = [
         name: 'Study',
         component: () => import('../views/StudyView.vue'),
         meta: {requiresAuth: true}
+    },
+    {
+        path: '/forgot-password',
+        name: 'ForgotPassword',
+        component: () => import('../views/ForgotPassword.vue')
+    },
+    {
+        path: '/reset-password',
+        name: 'ResetPassword',
+        component: () => import('../views/ResetPassword.vue')
     }
 ]
 

@@ -28,19 +28,19 @@ export interface StudyStats {
 export const studyService = {
     // 獲取學習目標
     async getStudyGoal() {
-        const response = await api.get<StudyGoal>('/study-goals')
+        const response = await api.get<StudyGoal>('/StudyGoals')
         return response.data
     },
 
     // 獲取今日進度
     async getTodayProgress() {
-        const response = await api.get<StudyProgress>('/study-goals/progress')
+        const response = await api.get<StudyProgress>('/StudyGoals/progress')
         return response.data
     },
 
     // 獲取學習統計
     async getStudyStats() {
-        const response = await api.get<StudyStats>('/study-progress/statistics')
+        const response = await api.get<StudyStats>('/StudyProgress/statistics')
         return response.data
     }
 }
