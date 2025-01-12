@@ -1,27 +1,37 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
+import {authService} from '../services/auth'
 
 // 使用 ref 來管理表單數據
+const router = useRouter()
 const email = ref('')
 const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
-
-const router = useRouter()
+const isLoading = ref(false)
 
 // 處理註冊表單提交
 const handleSubmit = async () => {
     try {
+        // 開始載入
+        isLoading.value = true
+        errorMessage.value = ''
+        
         // 基本的表單驗證
         if (!email.value || !username.value || !password.value) {
             errorMessage.value = '請填寫所有欄位'
             return
         }
         
-        // TODO: 這裡之後會加入實際的 API 呼叫
-        // 先用簡單的模擬來測試路由功能
-        console.log('註冊資料：', {
+        // 密碼長度驗證
+        if (password.value.length < 6) {
+            errorMessage.value = '密碼長度至少需要6個字元'
+            return
+        }
+        
+        // 調用註冊 API
+        await authService.register({
             email: email.value,
             username: username.value,
             password: password.value
@@ -29,9 +39,24 @@ const handleSubmit = async () => {
         
         // 註冊成功後導向登入頁
         await router.push('/login')
-    } catch (error) {
-        errorMessage.value = '註冊失敗，請稍後再試'
+    } catch (error: any) {
+        // 處理不同類型的錯誤
+        if (error.response?.status === 400) {
+            // 處理特定的驗證錯誤
+            if (error.response.data.includes('Email already exists')) {
+                errorMessage.value = '此電子郵件已被使用'
+            } else if (error.response.data.includes('Username already exists')) {
+                errorMessage.value = '此使用者名稱已被使用'
+            } else {
+                errorMessage.value = error.response.data
+            }
+        } else {
+            errorMessage.value = '註冊失敗，請稍後再試'
+        }
         console.error('註冊錯誤：', error)
+    } finally {
+        // 結束載入狀態
+        isLoading.value = false
     }
 }
 </script>
@@ -51,6 +76,7 @@ const handleSubmit = async () => {
                         v-model="email"
                         placeholder="請輸入電子郵件"
                         required
+                        :disabled="isLoading"
                     >
                 </div>
                 
@@ -62,6 +88,7 @@ const handleSubmit = async () => {
                         v-model="username"
                         placeholder="請輸入使用者名稱"
                         required
+                        :disabled="isLoading"
                     >
                 </div>
                 
@@ -73,6 +100,7 @@ const handleSubmit = async () => {
                         v-model="password"
                         placeholder="請輸入密碼"
                         required
+                        :disabled="isLoading"
                     >
                 </div>
                 
@@ -80,7 +108,13 @@ const handleSubmit = async () => {
                     {{ errorMessage }}
                 </div>
                 
-                <button type="submit" class="submit-btn">註冊</button>
+                <button
+                    type="submit"
+                    class="submit-btn"
+                    :disabled="isLoading"
+                >
+                    {{ isLoading ? '註冊中...' : '註冊' }}
+                </button>
             </form>
             
             <p class="login-link">

@@ -1,35 +1,51 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
+import {authService} from '../services/auth' // 引入我們的認證服務
 
-// 使用 ref 來管理表單數據
+const router = useRouter()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
-const router = useRouter()
+const isLoading = ref(false)  // 新增載入狀態
 
 // 處理登入表單提交
 const handleSubmit = async () => {
     try {
+        // 開始載入
+        isLoading.value = true
+        errorMessage.value = ''
+        
         // 基本的表單驗證
         if (!email.value || !password.value) {
             errorMessage.value = '請填寫所有欄位'
             return
         }
         
-        // TODO: 這裡之後會加入實際的 API 呼叫
-        // 暫時模擬登入成功的情況
-        const mockToken = 'mock-jwt-token'
-        localStorage.setItem('token', mockToken)
+        // 調用登入 API
+        const response = await authService.login({
+            email: email.value,
+            password: password.value
+        })
         
-        // 清除錯誤訊息
-        errorMessage.value = ''
+        // 將 token 儲存到本地
+        localStorage.setItem('token', response.token)
         
         // 登入成功後導向主頁面
         await router.push('/home')
-    } catch (error) {
-        errorMessage.value = '登入失敗，請確認帳號密碼是否正確'
+    } catch (error: any) {
+        // 處理不同類型的錯誤
+        if (error.response?.status === 401) {
+            errorMessage.value = '帳號或密碼錯誤'
+        } else if (error.response?.data?.message) {
+            errorMessage.value = error.response.data.message
+        } else {
+            errorMessage.value = '登入失敗，請稍後再試'
+        }
         console.error('登入錯誤：', error)
+    } finally {
+        // 結束載入狀態
+        isLoading.value = false
     }
 }
 </script>
@@ -49,6 +65,7 @@ const handleSubmit = async () => {
                         v-model="email"
                         placeholder="請輸入電子郵件"
                         required
+                        :disabled="isLoading"
                     >
                 </div>
                 
@@ -60,6 +77,7 @@ const handleSubmit = async () => {
                         v-model="password"
                         placeholder="請輸入密碼"
                         required
+                        :disabled="isLoading"
                     >
                 </div>
                 
@@ -67,7 +85,13 @@ const handleSubmit = async () => {
                     {{ errorMessage }}
                 </div>
                 
-                <button type="submit" class="submit-btn">登入</button>
+                <button
+                    type="submit"
+                    class="submit-btn"
+                    :disabled="isLoading"
+                >
+                    {{ isLoading ? '登入中...' : '登入' }}
+                </button>
             </form>
             
             <p class="register-link">
@@ -79,84 +103,15 @@ const handleSubmit = async () => {
 </template>
 
 <style scoped>
-/* 我們可以重用大部分註冊頁面的樣式，只需要修改一些特定的類名 */
-.login-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 20px;
+/* 保留原有的樣式 */
+/* 新增載入狀態的樣式 */
+.submit-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+input:disabled {
     background-color: #f5f5f5;
-}
-
-.login-form {
-    background-color: white;
-    max-width: 400px;
-    width: 100%;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-label {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-input {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-.submit-btn {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.3s ease;
-}
-
-.submit-btn:hover {
-    background-color: #45a049;
-}
-
-.error-message {
-    color: #ff4444;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.register-link {
-    margin-top: 1rem;
-    text-align: center;
-    font-size: 0.9rem;
-}
-
-.register-link a {
-    color: #4CAF50;
-    text-decoration: none;
-}
-
-.register-link a:hover {
-    text-decoration: underline;
+    cursor: not-allowed;
 }
 </style>
