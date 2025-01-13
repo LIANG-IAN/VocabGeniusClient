@@ -20,7 +20,15 @@ export const reviewService = {
 
     // 提交複習結果
     async submitReview(cardId: number, proficiency: number) {
-        const response = await api.post(`/VocabCards/${cardId}/review`, {proficiency})
+        const response = await api.post(
+            `/VocabCards/${cardId}/review`,
+            proficiency,
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
         return response.data
     }
 }

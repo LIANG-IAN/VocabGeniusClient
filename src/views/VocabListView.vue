@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {onMounted, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
-import {type VocabCard, vocabService} from '../services/vocab'
+import {type PaginatedResponse, type VocabCard, vocabService} from '../services/vocab'
 
 const router = useRouter()
 const searchQuery = ref('')
@@ -19,28 +19,45 @@ const pageSize = ref(10)
 // 載入單字卡列表
 const loadVocabCards = async (page = 1) => {
     try {
-        loading.value = true
-        errorMessage.value = ''
+        loading.value = true;
+        errorMessage.value = '';
+        
+        vocabCards.value = [];
+        
         const response = await vocabService.getVocabCards({
             pageNumber: page,
             pageSize: pageSize.value,
             search: searchQuery.value
-        })
-        console.log(response[0])
-        console.log('Hi')
+        });
         
-        vocabCards.value = response.items
-        totalPages.value = response.totalPages
-        currentPage.value = response.currentPage
+        if (Array.isArray(response)) {
+            vocabCards.value = response;
+            totalPages.value = Math.ceil(response.length / pageSize.value);
+            currentPage.value = page;
+        } else if (
+            response &&
+            typeof response === 'object' &&
+            'items' in response &&
+            'totalPages' in response &&
+            'currentPage' in response
+        ) {
+            const paginatedResponse = response as PaginatedResponse<VocabCard>;
+            vocabCards.value = paginatedResponse.items;
+            totalPages.value = paginatedResponse.totalPages;
+            currentPage.value = paginatedResponse.currentPage;
+        } else {
+            errorMessage.value = '無效的回應格式';
+            return;
+        }
     } catch (error: any) {
-        console.error('載入單字卡失敗：', error)
-        errorMessage.value = '載入失敗，請重試'
+        console.error('載入單字卡失敗：', error);
+        errorMessage.value = '載入失敗，請重試';
         
         if (error.response?.status === 401) {
-            await router.push('/login')
+            await router.push('/login');
         }
     } finally {
-        loading.value = false
+        loading.value = false;
     }
 }
 
@@ -117,7 +134,6 @@ const playPronunciation = async (word: string) => {
         const audio = new Audio(audioUrl)
         await audio.play()
         
-        // 清理 URL
         audio.onended = () => {
             URL.revokeObjectURL(audioUrl)
         }
@@ -125,7 +141,6 @@ const playPronunciation = async (word: string) => {
         console.error('播放發音失敗：', error)
     }
 }
-
 
 // 頁面載入時獲取數據
 onMounted(() => {
@@ -160,81 +175,17 @@ onMounted(() => {
                 載入中...
             </div>
             
-            <div v-else-if="vocabCards.length === 0" class="empty-state">
-                還沒有任何單字卡，開始新增一些單字吧！
-            </div>
-            
-            <div v-else class="cards-grid">
-                <div
-                    v-for="card in vocabCards"
-                    :key="card.id"
-                    class="vocab-card"
-                >
-                    <div class="card-header">
-                        <h3>{{ card.word }}</h3>
-                        <span class="phonetic">{{ card.phonetic }}</span>
-                    </div>
-                    
-                    <div class="card-body">
-                        <p class="translation">{{ card.translation }}</p>
-                        <div class="proficiency-indicator">
-                            熟練度：
-                            <span
-                                v-for="n in 5"
-                                :key="n"
-                                :class="['star', { active: n <= card.proficiency }]"
-                            >★</span>
-                        </div>
-                    </div>
-                    
-                    <div class="card-footer">
-                        <button
-                            @click="handleReview(card.id)"
-                            class="review-btn"
-                        >
-                            複習
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 新增單字的彈出視窗 -->
-        <div v-if="showAddModal" class="modal-overlay">
-            <div class="modal">
-                <h2>新增單字</h2>
-                <input
-                    v-model="newWord"
-                    type="text"
-                    placeholder="請輸入英文單字"
-                    class="modal-input"
-                >
-                <div class="modal-buttons">
-                    <button @click="showAddModal = false" class="cancel-btn">
-                        取消
-                    </button>
-                    <button @click="handleAddWord" class="confirm-btn">
-                        新增
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="vocab-list">
-            <div v-if="loading" class="loading">
-                載入中...
-            </div>
-            
             <div v-else-if="errorMessage" class="error-message">
                 {{ errorMessage }}
-                <button @click="loadVocabCards()" class="retry-btn">
-                    重試
-                </button>
+                <button @click="loadVocabCards()" class="retry-btn">重試</button>
             </div>
             
             <template v-else>
-                <!-- 卡片網格 -->
-                <div class="cards-grid">
+                <div v-if="Array.isArray(vocabCards) && vocabCards.length === 0" class="empty-state">
+                    還沒有任何單字卡，開始新增一些單字吧！
+                </div>
+                
+                <div v-else-if="Array.isArray(vocabCards) && vocabCards.length > 0" class="cards-grid">
                     <div
                         v-for="card in vocabCards"
                         :key="card.id"
@@ -286,7 +237,7 @@ onMounted(() => {
                     </div>
                 </div>
                 
-                <!-- 分頁控制 -->
+                <!-- 分頁控制項 -->
                 <div v-if="totalPages > 1" class="pagination">
                     <button
                         :disabled="currentPage === 1"
@@ -309,6 +260,27 @@ onMounted(() => {
                     </button>
                 </div>
             </template>
+        </div>
+        
+        <!-- 新增單字的彈出視窗 -->
+        <div v-if="showAddModal" class="modal-overlay">
+            <div class="modal">
+                <h2>新增單字</h2>
+                <input
+                    v-model="newWord"
+                    type="text"
+                    placeholder="請輸入英文單字"
+                    class="modal-input"
+                >
+                <div class="modal-buttons">
+                    <button @click="showAddModal = false" class="cancel-btn">
+                        取消
+                    </button>
+                    <button @click="handleAddWord" class="confirm-btn">
+                        新增
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -501,7 +473,6 @@ onMounted(() => {
     background-color: #1976d2;
 }
 
-/* 彈出視窗樣式 */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -540,29 +511,5 @@ onMounted(() => {
 .cancel-btn {
     padding: 0.5rem 1rem;
     background-color: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.confirm-btn {
-    padding: 0.5rem 1rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-/* 響應式設計 */
-@media (max-width: 768px) {
-    .search-section,
-    .vocab-list {
-        padding: 0 1rem;
-    }
-    
-    .cards-grid {
-        grid-template-columns: 1fr;
-    }
 }
 </style>
