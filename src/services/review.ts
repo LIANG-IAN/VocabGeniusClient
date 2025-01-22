@@ -30,5 +30,10 @@ export const reviewService = {
             }
         );
         return response.data
+    },
+
+    async getSpecificCard(cardId: number) {
+        const response = await api.get<ReviewVocabCard>(`/VocabCards/${cardId}`)
+        return response.data
     }
 }

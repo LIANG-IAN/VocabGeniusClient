@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
-import {useRouter} from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import {reviewService, type ReviewVocabCard} from '../services/review'
 import {vocabService} from '../services/vocab'
 
 const router = useRouter()
+const route = useRoute()
 const currentCard = ref<ReviewVocabCard | null>(null)
 const reviewCards = ref<ReviewVocabCard[]>([])
 const showAnswer = ref(false)
@@ -17,13 +18,34 @@ const loadReviewCards = async () => {
     try {
         loading.value = true
         errorMessage.value = ''
-        const cards = await reviewService.getDueReviews()
-        reviewCards.value = cards
         
-        if (cards.length > 0) {
-            currentCard.value = cards[0]
+        // 檢查 URL 參數中是否有 wordId
+        const wordId = route.query.wordId
+        
+        if (wordId) {
+            // 如果有指定 wordId，就直接獲取該單字卡
+            const response = await reviewService.getDueReviews()
+            const specificCard = response.find(card => card.id === Number(wordId))
+            if (specificCard) {
+                reviewCards.value = [specificCard]
+                currentCard.value = specificCard
+                studyComplete.value = false
+            } else {
+                // 如果找不到指定的單字卡，顯示錯誤訊息
+                errorMessage.value = '找不到指定的單字卡'
+                studyComplete.value = true
+            }
         } else {
-            studyComplete.value = true
+            // 如果沒有指定 wordId，就獲取所有待複習的單字
+            const cards = await reviewService.getDueReviews()
+            reviewCards.value = cards
+            
+            if (cards.length > 0) {
+                currentCard.value = cards[0]
+                studyComplete.value = false
+            } else {
+                studyComplete.value = true
+            }
         }
     } catch (error) {
         console.error('載入複習卡片失敗：', error)

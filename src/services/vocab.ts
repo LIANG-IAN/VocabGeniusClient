@@ -8,6 +8,8 @@ export interface VocabCard {
     partOfSpeech: string;
     exampleSentence: string;
     sentenceTranslation: string;
+    relatedPhrase: string;
+    phraseTranslation: string;
     proficiency: number;
     lastReviewedAt: string | null;
     nextReviewAt: string | null;
@@ -30,6 +32,17 @@ interface VocabQueryParams {
     sortBy?: string;
     ascending?: boolean;
     search?: string;
+}
+
+// 定義 VocabCardDto 介面
+export interface VocabCardDto {
+    translation: string;
+    phonetic: string;
+    partOfSpeech: string;
+    exampleSentence: string;
+    sentenceTranslation: string;
+    relatedPhrase?: string;
+    phraseTranslation?: string;
 }
 
 export interface StudyProgress {
@@ -55,7 +68,13 @@ export const vocabService = {
         return response.data;
     },
 
-    // 添加新單字
+    // 查詢單字資訊
+    async getWordInfo(word: string): Promise<VocabCardDto> {
+        const response = await api.get<VocabCardDto>(`/VocabCards/wordinfo/${word}`);
+        return response.data;
+    },
+
+    // 創建單字卡
     async createVocabCard(word: string) {
         const response = await api.post<VocabCard>('/VocabCards/CreateVocabCard',
             JSON.stringify(word),
