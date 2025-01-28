@@ -20,9 +20,9 @@ export interface StudyProgress {
 
 // 學習統計介面
 export interface StudyStats {
-    currentStreak: number
-    longestStreak: number
-    totalDays: number
+    currentStreak: number;
+    longestStreak: number;
+    totalDays: number;
 }
 
 export const studyService = {
@@ -39,8 +39,13 @@ export const studyService = {
     },
 
     // 獲取學習統計
-    async getStudyStats() {
+    async getStudyStats(): Promise<StudyStats> {
         const response = await api.get<StudyStats>('/StudyProgress/statistics')
+        return response.data
+    },
+
+    async setStudyGoal(goal: StudyGoal): Promise<StudyGoal> {
+        const response = await api.post<StudyGoal>('/StudyGoals', goal)
         return response.data
     }
 }

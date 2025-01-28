@@ -7,11 +7,12 @@ const router = useRouter()
 const loading = ref(true)
 const cards = ref<VocabCard[]>([])
 const searchText = ref('')
-const showCardMenu = ref(false)
 const selectedCard = ref<VocabCard | null>(null)
 const expandedCardIds = ref<Set<number>>(new Set())
 const cardMenuPosition = ref({top: 0, left: 0})
 const activeCardMenu = ref<number | null>(null)
+const isDeleting = ref(false)
+const errorMessage = ref('')
 
 // 載入單字卡
 const loadCards = async () => {
@@ -59,38 +60,55 @@ const playPronunciation = async (text: string) => {
 const openCardMenu = (card: VocabCard, event: MouseEvent) => {
     event.stopPropagation()
     activeCardMenu.value = card.id
+    selectedCard.value = card
     
-    // 計算選單位置
     const button = event.currentTarget as HTMLElement
     const rect = button.getBoundingClientRect()
     
-    cardMenuPosition.value = {
-        top: rect.bottom + window.scrollY,
-        left: rect.right + window.scrollX - 120  // 120是選單寬度
+    // 計算選單位置，確保不會超出視窗
+    const menuWidth = 120
+    let left = rect.right - menuWidth
+    let top = rect.bottom + window.scrollY
+    
+    // 調整水平位置以避免超出右側
+    if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth - 10
     }
+    
+    cardMenuPosition.value = {top, left}
 }
 
 // 編輯卡片
-const editCard = async () => {
-    if (!selectedCard.value) return
-    // TODO: 實作編輯功能
-    showCardMenu.value = false
+const editCard = (card: VocabCard) => {
+    router.push(`/vocab-edit/${card.id}`)
+    activeCardMenu.value = null
 }
 
 // 刪除卡片
-const deleteCard = async () => {
-    if (!selectedCard.value || !confirm('確定要刪除這張單字卡嗎？')) return
+const deleteCard = async (card: VocabCard) => {
+    if (!card) return
     
     try {
-        await vocabService.deleteVocabCard(selectedCard.value.id)
+        isDeleting.value = true
+        errorMessage.value = ''
+        
+        await vocabService.deleteVocabCard(card.id)
         await loadCards()
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.error('刪除單字卡失敗:', error)
-        }
+        
+    } catch (error: any) {
+        console.error('刪除單字卡失敗:', error)
+        errorMessage.value = '刪除失敗，請稍後再試'
     } finally {
-        showCardMenu.value = false
+        isDeleting.value = false
+        activeCardMenu.value = null
     }
+}
+
+const confirmDelete = (card: VocabCard) => {
+    if (confirm('確定要刪除這張單字卡嗎？')) {
+        deleteCard(card)
+    }
+    activeCardMenu.value = null
 }
 
 // 點擊其他地方關閉選單
@@ -175,12 +193,12 @@ onUnmounted(() => {
                                 v-if="activeCardMenu === card.id"
                                 class="dropdown-menu"
                                 :style="{
-                  top: `${cardMenuPosition.top}px`,
-                  left: `${cardMenuPosition.left}px`
-                }"
+            top: `${cardMenuPosition.top}px`,
+            left: `${cardMenuPosition.left}px`
+        }"
                             >
-                                <button @click.stop="editCard">編輯字卡</button>
-                                <button @click.stop="deleteCard">刪除字卡</button>
+                                <button @click.stop="editCard(card)">編輯字卡</button>
+                                <button @click.stop="confirmDelete(card)">刪除字卡</button>
                             </div>
                         </div>
                     </div>
@@ -210,6 +228,12 @@ onUnmounted(() => {
                             </div>
                             <p class="example">{{ card.exampleSentence }}</p>
                             <p class="example-translation">{{ card.sentenceTranslation }}</p>
+                        </div>
+                        
+                        <div v-if="card.relatedPhrase" class="phrase-section">
+                            <div class="phrase-header">相關片語</div>
+                            <p class="phrase">{{ card.relatedPhrase }}</p>
+                            <p class="phrase-translation">{{ card.phraseTranslation }}</p>
                         </div>
                         
                         <!-- 熟練度指示器 -->
@@ -290,28 +314,41 @@ onUnmounted(() => {
     padding: 1.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    height: 160px; /* 未展開時的固定高度 */
+    height: 100px; /* 收合時的基本高度 */
     position: relative;
     overflow: hidden;
     transition: height 0.3s ease;
 }
 
-.vocab-card.expanded .card-content {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+.vocab-card.expanded {
+    height: 500px; /* 展開時的最大高度 */
+    overflow-y: auto;
 }
 
+.vocab-card.expanded::-webkit-scrollbar {
+    width: 8px;
+}
+
+.vocab-card.expanded::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.vocab-card.expanded::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.vocab-card.expanded::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
 
 .card-header {
-    position: absolute;
-    top: 1.5rem;
-    left: 1.5rem;
-    right: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    position: sticky;
+    top: 0;
     background: white;
+    padding: 0 1.5rem;
+    margin: -1.5rem -1.5rem 1rem -1.5rem;
     z-index: 2;
 }
 
@@ -355,17 +392,6 @@ onUnmounted(() => {
 
 .more-btn:hover {
     background: #f5f5f5;
-}
-
-.card-content {
-    position: absolute;
-    top: 5rem; /* 給標題預留空間 */
-    left: 1.5rem;
-    right: 1.5rem;
-    opacity: 0;
-    transform: translateY(10px);
-    pointer-events: none;
-    transition: all 0.3s ease;
 }
 
 .part-of-speech {
@@ -458,26 +484,22 @@ onUnmounted(() => {
 }
 
 .card-content {
-    max-height: 0;
-    overflow: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    visibility: hidden;
+    position: relative;
+    padding-top: 4rem; /* 給 header 預留空間 */
 }
 
 .card-content.visible {
-    max-height: 300px; /* 足夠大的值以容納內容 */
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
 }
 
 .menu-wrapper {
     position: relative;
-}
-
-.more-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #666;
-    padding: 0.5rem;
-    cursor: pointer;
-    border-radius: 4px;
 }
 
 .more-btn:hover {
@@ -485,14 +507,12 @@ onUnmounted(() => {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute */
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    width: 140px;
-    z-index: 10;
+    width: 120px;
+    z-index: 1000;
 }
 
 .dropdown-menu button {
@@ -512,11 +532,42 @@ onUnmounted(() => {
     background: #f5f5f5;
 }
 
-/* 分隔線 */
 .dropdown-menu button:not(:last-child) {
     border-bottom: 1px solid #eee;
 }
 
+.more-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    color: #666;
+}
+
+.phrase-section {
+    margin-top: 1.5rem;
+    background: #F8F9FA;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.phrase-header {
+    color: #666;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+}
+
+.phrase {
+    color: #2c3e50;
+    margin: 0.5rem 0;
+}
+
+.phrase-translation {
+    color: #666;
+    margin: 0;
+}
 
 @media (max-width: 768px) {
     .cards-grid {
