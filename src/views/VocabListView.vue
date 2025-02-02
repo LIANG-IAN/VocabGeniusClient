@@ -2,6 +2,7 @@
 import {onMounted, onUnmounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {type VocabCard, vocabService} from '../services/vocab'
+import AddVocabModal from '../components/AddVocabModal.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -13,6 +14,7 @@ const cardMenuPosition = ref({top: 0, left: 0})
 const activeCardMenu = ref<number | null>(null)
 const isDeleting = ref(false)
 const errorMessage = ref('')
+const showAddModal = ref(false)
 
 // 載入單字卡
 const loadCards = async () => {
@@ -65,12 +67,10 @@ const openCardMenu = (card: VocabCard, event: MouseEvent) => {
     const button = event.currentTarget as HTMLElement
     const rect = button.getBoundingClientRect()
     
-    // 計算選單位置，確保不會超出視窗
     const menuWidth = 120
     let left = rect.right - menuWidth
     let top = rect.bottom + window.scrollY
     
-    // 調整水平位置以避免超出右側
     if (left + menuWidth > window.innerWidth) {
         left = window.innerWidth - menuWidth - 10
     }
@@ -103,7 +103,7 @@ const deleteCard = async (card: VocabCard) => {
         activeCardMenu.value = null
     }
 }
-
+// 確認刪除
 const confirmDelete = (card: VocabCard) => {
     if (confirm('確定要刪除這張單字卡嗎？')) {
         deleteCard(card)
@@ -158,6 +158,13 @@ onUnmounted(() => {
             
             <!-- 卡片列表 -->
             <div v-else class="cards-grid">
+                <!-- 新增按鈕卡片 -->
+                <div class="vocab-card add-card" @click="showAddModal = true">
+                    <div class="add-icon">+</div>
+                    <h3>新增單字卡</h3>
+                </div>
+                
+                <!-- 現有單字卡片 -->
                 <div
                     v-for="card in cards"
                     :key="card.id"
@@ -193,9 +200,9 @@ onUnmounted(() => {
                                 v-if="activeCardMenu === card.id"
                                 class="dropdown-menu"
                                 :style="{
-            top: `${cardMenuPosition.top}px`,
-            left: `${cardMenuPosition.left}px`
-        }"
+                                    top: `${cardMenuPosition.top}px`,
+                                    left: `${cardMenuPosition.left}px`
+                                }"
                             >
                                 <button @click.stop="editCard(card)">編輯字卡</button>
                                 <button @click.stop="confirmDelete(card)">刪除字卡</button>
@@ -238,17 +245,23 @@ onUnmounted(() => {
                         
                         <!-- 熟練度指示器 -->
                         <div class="proficiency-section">
-              <span
-                  v-for="n in 5"
-                  :key="n"
-                  class="star"
-                  :class="{ active: n <= card.proficiency }"
-              >★</span>
+                            <span
+                                v-for="n in 5"
+                                :key="n"
+                                class="star"
+                                :class="{ active: n <= card.proficiency }"
+                            >★</span>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
+        
+        <!-- 新增單字Modal -->
+        <AddVocabModal
+            v-model:show="showAddModal"
+            @saved="loadCards"
+        />
     </div>
 </template>
 

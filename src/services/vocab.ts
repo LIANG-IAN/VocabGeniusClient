@@ -70,7 +70,7 @@ export const vocabService = {
 
     // 查詢單字資訊
     async getWordInfo(word: string): Promise<VocabCardDto> {
-        const response = await api.get<VocabCardDto>(`/VocabCards/wordinfo/${word}`);
+        const response = await api.get<VocabCardDto>(`/VocabCards/GetWordInfo/${word}`);
         return response.data;
     },
 
